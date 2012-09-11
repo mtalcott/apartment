@@ -110,7 +110,7 @@ module Apartment
       #
       def full_search_path
         path = [@current_database.to_s] + Apartment.persistent_schemas
-        path.map { |s| "\"#{s}\"" }.join(',')
+        path.uniq.map { |s| %("#{s}") }.join(',')
       end
     end
   end
