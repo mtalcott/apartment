@@ -1,13 +1,20 @@
 require 'apartment/railtie' if defined?(Rails)
+require 'active_support/core_ext/object/blank'
+require 'forwardable'
 
 module Apartment
 
   class << self
-    ACCESSOR_METHODS  = [:use_postgres_schemas, :seed_after_create, :prepend_environment]
-    WRITER_METHODS    = [:database_names, :excluded_models, :default_schema, :persistent_schemas]
+
+    extend Forwardable
+
+    ACCESSOR_METHODS  = [:use_schemas, :seed_after_create, :prepend_environment, :append_environment]
+    WRITER_METHODS    = [:database_names, :excluded_models, :default_schema, :persistent_schemas, :connection_class]
 
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
+
+    def_delegators :connection_class, :connection, :establish_connection
 
     # configure apartment with available options
     def configure
@@ -32,9 +39,23 @@ module Apartment
       @persistent_schemas || []
     end
 
+    def connection_class
+      @connection_class || ActiveRecord::Base
+    end
+
     # Reset all the config for Apartment
     def reset
       (ACCESSOR_METHODS + WRITER_METHODS).each{|method| instance_variable_set(:"@#{method}", nil) }
+    end
+
+    def use_postgres_schemas
+      warn "[Deprecation Warning] `use_postgresql_schemas` is now deprecated, please use `use_schemas`"
+      use_schemas
+    end
+
+    def use_postgres_schemas=(to_use_or_not_to_use)
+      warn "[Deprecation Warning] `use_postgresql_schemas=` is now deprecated, please use `use_schemas=`"
+      self.use_schemas = to_use_or_not_to_use
     end
 
   end
@@ -50,7 +71,8 @@ module Apartment
 
   module Elevators
     autoload :Generic,    'apartment/elevators/generic'
-    autoload :Subdomain,  'apartment/elevators/subdomain'
+    autoload :Subdomain,      'apartment/elevators/subdomain'
+    autoload :FirstSubdomain, 'apartment/elevators/first_subdomain'
     autoload :Domain,     'apartment/elevators/domain'
   end
 

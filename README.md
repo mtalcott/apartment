@@ -1,6 +1,6 @@
 # Apartment
-[![Code Climate](https://codeclimate.com/badge.png)](https://codeclimate.com/github/bradrobertson/apartment)
-[![Build Status](https://secure.travis-ci.org/bradrobertson/apartment.png?branch=development)](http://travis-ci.org/bradrobertson/apartment)
+[![Code Climate](https://codeclimate.com/badge.png)](https://codeclimate.com/github/influitive/apartment)
+[![Build Status](https://secure.travis-ci.org/influitive/apartment.png?branch=development)](http://travis-ci.org/influitive/apartment)
 
 *Multitenancy for Rails 3 and ActiveRecord*
 
@@ -33,8 +33,8 @@ you need to create a new database, you can run the following command:
 
     Apartment::Database.create('database_name')
 
-Apartment will create a new database in the following format: "_environment_\_database_name".
-In the case of a sqlite database, this will be created in your 'db/migrate' folder. With
+If you're using the [prepend environment](https://github.com/influitive/apartment#handling-environments) config option or you AREN'T using Postgresql Schemas, this will create a database in the following format: "#{environment}\_database_name".
+In the case of a sqlite database, this will be created in your 'db/' folder. With
 other databases, the database will be created as a new DB within the system.
 
 When you create a new database, all migrations will be run against that database, so it will be
@@ -132,13 +132,30 @@ Apartment will normally just switch the `schema_search_path` whole hog to the on
 
     config.persistent_schemas = ['some', 'other', 'schemas']
 
-This has numerous useful applications.  [Hstore](http://www.postgresql.org/docs/9.1/static/hstore.html), for instance, is a popular storage engine for Postgresql.  In order to use Hstore, you have to install to a specific schema and have that always in the `schema_search_path`.  This could be achieved like so:
+This has numerous useful applications.  [Hstore](http://www.postgresql.org/docs/9.1/static/hstore.html), for instance, is a popular storage engine for Postgresql.  In order to use Hstore, you have to install it to a specific schema and have that always in the `schema_search_path`.  This could be achieved like so:
 
+    # NOTE do not do this in a migration, must be done
+    # manually before you configure apartment with hstore
     # In a rake task, or on the console...
     ActiveRecord::Base.connection.execute("CREATE SCHEMA hstore; CREATE EXTENSION HSTORE SCHEMA hstore")
 
     # configure Apartment to maintain the `hstore` schema in the `schema_search_path`
     config.persistent_schemas = ['hstore']
+
+There are a few caveats to be aware of when using `hstore`.  First off, the hstore schema and extension creation need to be done manually *before* you reference it in any way in your migrations, database.yml or apartment.  This is an unfortunate manual step, but I haven't found a way around it.  You can achieve this from the command line using something like:
+
+    rails r 'ActiveRecord::Base.connection.execute("CREATE SCHEMA hstore; CREATE EXTENSION HSTORE SCHEMA hstore")'
+
+Next, your `database.yml` file must mimic what you've set for your default and persistent schemas in Apartment.  When you run migrataions with Rails, it won't know about the hstore schema because Apartment isn't injected into the default connection, it's done on a per-request basis, therefore Rails doesn't know about `hstore` during migrations.  To do so, add the following to your `database.yml` for all environments
+
+    # database.yml
+    ...
+    adapter: postgresql
+    schema_search_path: "public,hstore"
+    ...
+
+This would be for a config with `default_schema` set to `public` and `persistent_schemas` set to `['hstore']`
+
 
 ### Managing Migrations
 
@@ -147,7 +164,7 @@ of dbs to Apartment.  You can make this dynamic by providing a Proc object to be
 This object should yield an array of string representing each database name.  Example:
 
     # Dynamically get database names to migrate
-    config.database_names = lambda{ Customer.select(:database_name).map(&:database_name) }
+    config.database_names = lambda{ Customer.pluck(:database_name) }
 
     # Use a static list of database names for migrate
     config.database_names = ['db1', 'db2']
@@ -214,3 +231,7 @@ All jobs *must* stored in the global (public) namespace, so add it to the list o
 * Rake tasks (see the Rakefile) will help you setup your dbs necessary to run tests
 * Please issue pull requests to the `development` branch.  All development happens here, master is used for releases
 * Ensure that your code is accompanied with tests.  No code will be merged without tests
+
+## License
+
+Apartment is released under the [MIT License](http://www.opensource.org/licenses/MIT).

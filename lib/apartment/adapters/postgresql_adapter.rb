@@ -3,7 +3,7 @@ module Apartment
   module Database
 
     def self.postgresql_adapter(config)
-      Apartment.use_postgres_schemas ?
+      Apartment.use_schemas ?
         Adapters::PostgresqlSchemaAdapter.new(config) :
         Adapters::PostgresqlAdapter.new(config)
     end
@@ -33,14 +33,12 @@ module Apartment
     # Separate Adapter for Postgresql when using schemas
     class PostgresqlSchemaAdapter < AbstractAdapter
 
-      attr_reader :current_database
-
       #   Drop the database schema
       #
       #   @param {String} database Database (schema) to drop
       #
       def drop(database)
-        ActiveRecord::Base.connection.execute(%{DROP SCHEMA "#{database}" CASCADE})
+        Apartment.connection.execute(%{DROP SCHEMA "#{database}" CASCADE})
 
       rescue ActiveRecord::StatementInvalid
         raise SchemaNotFound, "The schema #{database.inspect} cannot be found."
@@ -78,7 +76,11 @@ module Apartment
       #
       def reset
         @current_database = Apartment.default_schema
-        ActiveRecord::Base.connection.schema_search_path = full_search_path
+        Apartment.connection.schema_search_path = full_search_path
+      end
+
+      def current_database
+        @current_database || Apartment.default_schema
       end
 
     protected
@@ -89,16 +91,16 @@ module Apartment
         return reset if database.nil?
 
         @current_database = database.to_s
-        ActiveRecord::Base.connection.schema_search_path = full_search_path
+        Apartment.connection.schema_search_path = full_search_path
 
       rescue ActiveRecord::StatementInvalid
-        raise SchemaNotFound, "The schema #{database.inspect} cannot be found."
+        raise SchemaNotFound, "One of the following schema(s) is invalid: #{full_search_path}"
       end
 
       #   Create the new schema
       #
       def create_database(database)
-        ActiveRecord::Base.connection.execute(%{CREATE SCHEMA "#{database}"})
+        Apartment.connection.execute(%{CREATE SCHEMA "#{database}"})
 
       rescue ActiveRecord::StatementInvalid
         raise SchemaExists, "The schema #{database} already exists."

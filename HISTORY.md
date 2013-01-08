@@ -1,3 +1,30 @@
+# 0.19.0
+  * Dec 29, 2012
+
+  - Apartment is now threadsafe
+  - New postgis adapter [zonpantli]
+  - Removed ActionDispatch dependency for use with Rack apps (regression)
+
+# 0.18.0
+  * Nov 27, 2012
+
+  - Added `append_environment` config option [virtualstaticvoid]
+  - Cleaned up the readme and generator documentation
+  - Added `connection_class` config option [smashtank]
+  - Fixed a [bug](https://github.com/influitive/apartment/issues/17#issuecomment-10758327) in pg adapter when missing schema
+
+# 0.17.1
+  * Oct 30, 2012
+
+  - Fixed a bug where switching to an unknown db in mysql2 would crash the app [Frodotus]
+
+# 0.17.0
+  * Sept 26, 2012
+
+  - Apartment has [a new home!](https://github.com/influitive/apartment)
+  - Support Sidekiq hooks to switch dbs [maedhr]
+  - Allow VERSION to be used on apartment:migrate [Bhavin Kamani]
+
 # 0.16.0
   * June 1, 2012
 
